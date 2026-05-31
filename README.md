@@ -38,6 +38,75 @@ echo 'source /opt/ros/humble/setup.bash' >> ~/.bashrc
 source ~/.bashrc
 ```
 
+### (4) `~/.bashrc` 권장 설정 (팀 공통)
+
+새 터미널을 열 때마다 워크스페이스가 자동으로 잡히고 로봇과 통신되도록, **아래 블록을 `~/.bashrc` 맨 아래에 추가**하세요.
+(적용되면 터미널에 `✅ ...` 확인 메시지가 표시됩니다.)
+
+```bash
+# ===== a2_mini_ws (ROKEY-7 a2) =====
+# (1) ROS2 Humble
+source /opt/ros/humble/setup.bash && echo "✅ ROS2 humble sourced"
+
+# (2) a2_mini 워크스페이스 오버레이 (빌드 결과가 있을 때만 — 최초 빌드 전 에러 방지)
+if [ -f ~/a2_mini_ws/install/setup.bash ]; then
+  source ~/a2_mini_ws/install/setup.bash
+  echo "✅ a2_mini_ws overlay sourced"
+else
+  echo "⚠️  a2_mini_ws 미빌드 (cd ~/a2_mini_ws && colcon build 필요)"
+fi
+
+# (3) 팀 공통 도메인 ID — ★ 전원 동일해야 서로/로봇이 보입니다 ★
+export ROS_DOMAIN_ID=2
+echo "✅ ROS_DOMAIN_ID=$ROS_DOMAIN_ID (팀 공통)"
+
+# (4) TurtleBot4 Discovery Server (팀 전원 동일 — 로봇/팀원 통신)
+if [ -f /etc/turtlebot4_discovery/setup.bash ]; then
+  source /etc/turtlebot4_discovery/setup.bash
+  echo "✅ turtlebot4 discovery server sourced"
+fi
+```
+
+| 항목 | 구분 | 비고 |
+|------|------|------|
+| `source /opt/ros/humble/setup.bash` | **필수** | 없으면 `ros2: command not found` |
+| `source ~/a2_mini_ws/install/setup.bash` | **필수** | 없으면 우리 패키지(`turtlebot4_beep`/`turtlebot4_image`)가 안 잡힘. 가드(`[ -f ... ]`) 덕분에 최초 빌드 전에도 터미널이 안 깨짐 |
+| `export ROS_DOMAIN_ID=2` | **팀 공통(★)** | **모두 `2`**. 값이 다르면 빌드·실행은 되는데 토픽이 하나도 안 보임 |
+| `source /etc/turtlebot4_discovery/setup.bash` | **팀 공통(★)** | TurtleBot4 Discovery Server 설정. 우리 팀은 **전원 같은 네트워크**라 이 파일을 **모두 동일하게** 갖고 있어야 함 (아래 (5) 참고) |
+
+> ⚠️ **주의:** 같은 터미널에서 `colcon build` 한 직후에는 오버레이가 갱신되도록
+> `source ~/a2_mini_ws/install/setup.bash` 를 **한 번 더** 실행하세요(새 터미널은 위 설정으로 자동 적용).
+
+### (5) Discovery Server 설정 파일 (`/etc/turtlebot4_discovery/setup.bash`)
+
+우리 팀은 **모두 같은 네트워크**에서 동일한 **Discovery Server**로 로봇·팀원이 서로를 찾습니다.
+따라서 팀원 전원이 **아래 내용의 파일을 `/etc/turtlebot4_discovery/setup.bash` 에 동일하게** 갖고 있어야 합니다.
+
+```bash
+source /opt/ros/humble/setup.bash
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+[ -t 0 ] && export ROS_SUPER_CLIENT=True || export ROS_SUPER_CLIENT=False
+export ROS_DOMAIN_ID=2
+export ROS_DISCOVERY_SERVER=";;192.168.107.102:11811;"   # 팀 공통 Discovery Server 주소
+```
+
+없으면 아래로 생성하세요 (`/etc` 는 시스템 폴더라 `sudo` 필요):
+
+```bash
+sudo mkdir -p /etc/turtlebot4_discovery
+sudo tee /etc/turtlebot4_discovery/setup.bash > /dev/null <<'EOF'
+source /opt/ros/humble/setup.bash
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+[ -t 0 ] && export ROS_SUPER_CLIENT=True || export ROS_SUPER_CLIENT=False
+export ROS_DOMAIN_ID=2
+export ROS_DISCOVERY_SERVER=";;192.168.107.102:11811;"
+EOF
+```
+
+- `ROS_DISCOVERY_SERVER` 의 `192.168.107.102:11811` 는 **팀 공통 Discovery Server 주소**입니다(전원 동일).
+- 이 파일은 **시스템 전역(`/etc`) 설정이라 git 레포에는 포함되지 않습니다.** 각자 PC에 위처럼 직접 두세요.
+- 편의 alias: `vd`(보기) / `ed`(편집) / `sd`(다시 source).
+
 ---
 
 ## 1. 온보딩 (이 4줄이면 끝)
@@ -100,6 +169,7 @@ ros2 pkg create --build-type ament_cmake <패키지명>
 ### 규칙
 - **`main` 브랜치에 직접 push 하지 않습니다.** `main`은 항상 빌드되는 안정 상태를 유지합니다.
 - 모든 작업은 **개인 작업 브랜치**에서 하고, **Pull Request(PR)** 로만 `main`에 병합합니다.
+- ⚠️ **예외:** 레포 소유자(**sungyu-sung**)는 branch protection 예외로 등록되어 `main` 직접 push가 가능합니다. 그 외 팀원은 위 PR 워크플로우를 따릅니다.
 
 ### 브랜치 이름 규칙
 ```
