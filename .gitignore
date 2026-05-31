@@ -1,0 +1,34 @@
+# ===== ROS2 / colcon 빌드 산출물 =====
+# (Pattern A: src/가 git 루트라 build/install/log는 보통 레포 바깥이지만, 방어적으로 무시)
+build/
+install/
+log/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+
+# ===== C++ =====
+*.o
+*.so
+*.a
+*.out
+
+# ===== 에디터 / IDE =====
+.vscode/
+.idea/
+*.swp
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== 기타 =====
+*.bag
+*.pcd
