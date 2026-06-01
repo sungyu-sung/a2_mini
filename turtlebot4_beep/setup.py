@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'beep_node = turtlebot4_beep.beep_node:main'
+            'beep_node = turtlebot4_beep.beep_node:main',
+            'beep_node_empirestateofmind = turtlebot4_beep.beep_node_empirestateofmind:main',
         ],
     },
 )
