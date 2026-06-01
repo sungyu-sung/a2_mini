@@ -19,7 +19,12 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([
             os.path.join(pkg_bringup, 'launch', 'turtlebot4_ignition.launch.py')
         ]),
-        launch_arguments={'world': world_path}.items()
+        launch_arguments={
+            'world': world_path,
+            'x': '3.5',      # 동쪽 벽에서 살짝 떨어뜨림
+            'y': '3.78',     # 뒤쪽(북쪽) 벽에 딱 붙게
+            'yaw': '1.57',   # +Y(북쪽) 바라봄
+        }.items()
     )
 
     lidar_bridge = Node(
@@ -51,4 +56,19 @@ def generate_launch_description():
         ]
     )
 
-    return LaunchDescription([sim, lidar_bridge, camera_bridge])
+    depth_bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        name='depth_bridge',
+        output='screen',
+        arguments=[
+            f'/world/{WORLD}/model/{ROBOT}/link/oakd_rgb_camera_frame/sensor/rgbd_camera/depth_image'
+            '@sensor_msgs/msg/Image[ignition.msgs.Image'
+        ],
+        remappings=[
+            (f'/world/{WORLD}/model/{ROBOT}/link/oakd_rgb_camera_frame/sensor/rgbd_camera/depth_image',
+             '/oakd/rgb/preview/depth')
+        ]
+    )
+
+    return LaunchDescription([sim, lidar_bridge, camera_bridge, depth_bridge])
