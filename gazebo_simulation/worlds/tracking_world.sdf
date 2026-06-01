@@ -1,0 +1,75 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <!-- world name은 warehouse로 둬야 turtlebot4 센서 브릿지 토픽 경로가 맞음 -->
+  <world name="warehouse">
+
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin name='ignition::gazebo::systems::Physics' filename='libignition-gazebo-physics-system.so'/>
+    <plugin name='ignition::gazebo::systems::UserCommands' filename='libignition-gazebo-user-commands-system.so'/>
+    <plugin name='ignition::gazebo::systems::SceneBroadcaster' filename='libignition-gazebo-scene-broadcaster-system.so'/>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 추적 대상: 파란 큐브. VelocityControl로 cmd_vel 제어 (wasd) -->
+    <model name="blue_cube">
+      <pose>-1.5 0 0.15 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.0045</ixx><iyy>0.0045</iyy><izz>0.0045</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.3 0.3 0.3</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.3 0.3 0.3</size></box></geometry>
+          <material>
+            <ambient>0.0 0.2 0.9 1</ambient>
+            <diffuse>0.0 0.2 0.9 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- 모델 전체에 속도 명령 (holonomic) -->
+      <plugin filename="ignition-gazebo-velocity-control-system"
+              name="ignition::gazebo::systems::VelocityControl">
+        <topic>/model/blue_cube/cmd_vel</topic>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

@@ -1,11 +1,12 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
-WORLD = 'warehouse'
+WORLD = 'warehouse'   # 두 world 파일 모두 내부 world name이 'warehouse' (브릿지 토픽 경로용)
 ROBOT = 'turtlebot4'
 
 
@@ -13,7 +14,10 @@ def generate_launch_description():
     pkg = get_package_share_directory('gazebo_simulation')
     pkg_bringup = get_package_share_directory('turtlebot4_ignition_bringup')
 
-    world_path = os.path.join(pkg, 'worlds', 'empty')
+    world_file = LaunchConfiguration('world_file')
+
+    # turtlebot4_ignition.launch.py가 .sdf를 붙이므로 확장자 없이 경로 전달
+    world_path = PathJoinSubstitution([pkg, 'worlds', world_file])
 
     sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -21,9 +25,9 @@ def generate_launch_description():
         ]),
         launch_arguments={
             'world': world_path,
-            'x': '3.5',      # 동쪽 벽에서 살짝 떨어뜨림
-            'y': '3.78',     # 뒤쪽(북쪽) 벽에 딱 붙게
-            'yaw': '1.57',   # +Y(북쪽) 바라봄
+            'x': LaunchConfiguration('x'),
+            'y': LaunchConfiguration('y'),
+            'yaw': LaunchConfiguration('yaw'),
         }.items()
     )
 
@@ -71,4 +75,32 @@ def generate_launch_description():
         ]
     )
 
-    return LaunchDescription([sim, lidar_bridge, camera_bridge, depth_bridge])
+    # depth → PointCloud2 (Nav2 costmap이 장애물로 등록)
+    points_bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        name='points_bridge',
+        output='screen',
+        arguments=[
+            f'/world/{WORLD}/model/{ROBOT}/link/oakd_rgb_camera_frame/sensor/rgbd_camera/points'
+            '@sensor_msgs/msg/PointCloud2[ignition.msgs.PointCloudPacked'
+        ],
+        remappings=[
+            (f'/world/{WORLD}/model/{ROBOT}/link/oakd_rgb_camera_frame/sensor/rgbd_camera/points',
+             '/oakd/rgb/preview/depth/points')
+        ]
+    )
+
+    return LaunchDescription([
+        # world_file: 'empty'(방 구조, 기본) 또는 'flat_obstacles'(평지+장애물2개)
+        DeclareLaunchArgument('world_file', default_value='empty',
+                              description="world 파일명 (empty / flat_obstacles)"),
+        DeclareLaunchArgument('x', default_value='3.5'),
+        DeclareLaunchArgument('y', default_value='3.78'),
+        DeclareLaunchArgument('yaw', default_value='1.57'),
+        sim,
+        lidar_bridge,
+        camera_bridge,
+        depth_bridge,
+        points_bridge,
+    ])
