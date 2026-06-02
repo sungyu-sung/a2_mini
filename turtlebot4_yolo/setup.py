@@ -31,6 +31,7 @@ setup(
         'console_scripts': [
             'yolo_detector = turtlebot4_yolo.yolo_detector:main',
             'yolo_viewer = turtlebot4_yolo.yolo_viewer:main',
+            'yolo_depth_detector = turtlebot4_yolo.yolo_depth_detector:main',
         ],
     },
 )

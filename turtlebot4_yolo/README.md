@@ -11,6 +11,18 @@ TurtleBot4 OAK-D 카메라 영상에 직접 학습시킨 **YOLO(`best.pt`)** 를
 |------|------|------|------|
 | `yolo_detector` | 카메라 영상 → YOLO 추론 → bbox 이미지 + 검출결과 | `/robot2/oakd/rgb/preview/image_raw` | `/yolo/image_annotated` (Image), `/yolo/detections` (String/JSON) |
 | `yolo_viewer` | bbox 이미지를 화면에 표시 | `/yolo/image_annotated` | - |
+| `yolo_depth_detector` | **단일 노드**: RGB로 car/dummy 탐지 + `car` bbox 중심 depth(거리) 측정. RGB·depth를 시간 동기화해 프레임 어긋남 방지 | `/robot2/oakd/rgb/image_raw` + `/robot2/oakd/stereo/image_raw` | `/yolo_depth/image_annotated` (Image, 거리 오버레이) |
+
+### yolo_depth_detector
+
+RGB YOLO 탐지와 depth 거리 측정을 **한 노드**에서 처리합니다(`message_filters`로 RGB+depth 동기화). `car` 탐지 시 bbox 중심의 거리를 화면/로그에 표시.
+
+```bash
+ros2 run turtlebot4_yolo yolo_depth_detector
+# 파라미터: rgb_topic, depth_topic, conf, target_class(기본 car), slop(동기화 허용 시간차), show
+```
+
+> 해상도 매핑: RGB와 stereo depth 해상도가 달라 bbox 중심을 비율로 매핑합니다. FOV/정렬 차가 크면 오차가 있을 수 있어, 정밀 측정 시 depth-to-RGB 정렬이 필요합니다.
 
 ## 사전 준비
 
