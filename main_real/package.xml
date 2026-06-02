@@ -11,7 +11,7 @@
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>nav2_msgs</depend>
-  <exec_depend>main_sim</exec_depend>
+  <depend>turtlebot4_navigation</depend>
   <exec_depend>tracking</exec_depend>
   <exec_depend>move_p1</exec_depend>
   <exec_depend>make_map</exec_depend>
