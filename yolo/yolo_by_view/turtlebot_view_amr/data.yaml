@@ -1,0 +1,7 @@
+path: /home/kimi/a2_mini_ws/src/yolo/yolo_by_view/turtlebot_view_amr
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: car
+  1: dummy
