@@ -56,7 +56,7 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': 'true'}.items()
     )
 
-    # 6) 추적 노드 (처음엔 꺼둠 — sim_main이 켬)
+    # 6) 추적 노드 (처음엔 꺼둠 — main_sim이 켬)
     tracker = Node(
         package='tracking', executable='tracking',
         name='tracking_node', output='screen',
@@ -65,8 +65,8 @@ def generate_launch_description():
 
     # 7) 오케스트레이터
     orchestrator = Node(
-        package='sim_main', executable='sim_main',
-        name='sim_main_node', output='screen',
+        package='main_sim', executable='main_sim',
+        name='main_sim_node', output='screen',
         parameters=[{'use_sim_time': True}]
     )
 

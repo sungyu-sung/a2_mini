@@ -17,7 +17,7 @@ class SimMainNode(Node):
     """
 
     def __init__(self):
-        super().__init__('sim_main_node')
+        super().__init__('main_sim_node')
 
         # ── 파라미터 ──
         self.declare_parameter('namespace', '')
@@ -45,7 +45,7 @@ class SimMainNode(Node):
         # 시작 시 추적은 꺼둠
         self._publish_track(False)
 
-        self.get_logger().info('sim_main 시작 — 외부 트리거 대기 중 (IDLE)')
+        self.get_logger().info('main_sim 시작 — 외부 트리거 대기 중 (IDLE)')
         self.get_logger().info(f'트리거 토픽: {trig}')
         self.get_logger().info(f'P1 목표: ({self.p1_x}, {self.p1_y}), yaw={self.p1_yaw}')
 

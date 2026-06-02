@@ -40,7 +40,7 @@ class TrackingNode(Node):
                                  self.rgb_cb, 10)
         self.create_subscription(Image, f'{prefix}/oakd/rgb/preview/depth',
                                  self.depth_cb, 10)
-        # 외부(sim_main 등)에서 추적 on/off 제어
+        # 외부(main_sim 등)에서 추적 on/off 제어
         from std_msgs.msg import Bool
         self.create_subscription(Bool, f'{prefix}/tracking_enable',
                                  self.enable_cb, 10)

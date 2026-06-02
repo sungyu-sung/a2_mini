@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'sim_main'
+package_name = 'main_sim'
 
 setup(
     name=package_name,
@@ -27,7 +27,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'sim_main = sim_main.sim_main_node:main',
+            'main_sim = main_sim.main_sim_node:main',
         ],
     },
 )

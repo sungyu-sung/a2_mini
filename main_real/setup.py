@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'tracking'
+package_name = 'main_real'
 
 setup(
     name=package_name,
@@ -27,8 +27,6 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'tracking = tracking.tracking_node:main',
-            'tracking_yolo = tracking.tracking_yolo_node:main',
         ],
     },
 )
