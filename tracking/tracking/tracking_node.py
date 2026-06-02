@@ -18,8 +18,10 @@ class TrackingNode(Node):
         self.declare_parameter('max_linear', 0.25)       # 최대 전진 속도
         self.declare_parameter('max_angular', 0.8)       # 최대 회전 속도
         self.declare_parameter('center_tol', 30)         # 중심 허용 픽셀 오차
+        self.declare_parameter('enabled', True)          # 시작 시 추적 활성 여부
 
         ns = self.get_parameter('namespace').value
+        self.enabled = self.get_parameter('enabled').value
         self.target_dist = self.get_parameter('target_distance').value
         self.dist_tol = self.get_parameter('distance_tol').value
         self.max_lin = self.get_parameter('max_linear').value
@@ -38,6 +40,10 @@ class TrackingNode(Node):
                                  self.rgb_cb, 10)
         self.create_subscription(Image, f'{prefix}/oakd/rgb/preview/depth',
                                  self.depth_cb, 10)
+        # 외부(sim_main 등)에서 추적 on/off 제어
+        from std_msgs.msg import Bool
+        self.create_subscription(Bool, f'{prefix}/tracking_enable',
+                                 self.enable_cb, 10)
         self.pub = self.create_publisher(Twist, f'{prefix}/cmd_vel', 10)
 
         self.create_timer(0.1, self.control_loop)  # 10Hz 제어
@@ -74,7 +80,17 @@ class TrackingNode(Node):
         self.depth = np.array(self.bridge.imgmsg_to_cv2(msg, 'passthrough'),
                               dtype=np.float32)
 
+    def enable_cb(self, msg):
+        self.enabled = msg.data
+        self.get_logger().info(f'추적 {"활성화" if self.enabled else "비활성화"}')
+        if not self.enabled:
+            self.pub.publish(Twist())  # 끌 때 정지
+
     def control_loop(self):
+        # 비활성 상태면 아무것도 안 함
+        if not self.enabled:
+            return
+
         twist = Twist()
 
         # 큐브 안 보이면 정지

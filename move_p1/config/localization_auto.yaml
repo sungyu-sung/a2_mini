@@ -31,10 +31,10 @@ amcl:
     # 로봇 시작 위치가 항상 SLAM 원점(0,0,0)이므로 자동 초기화 (RViz 2D Pose Estimate 불필요)
     set_initial_pose: true
     initial_pose:
-      x: -0.34
-      y: -0.10
+      x: -0.05
+      y: -0.14
       z: 0.0
-      yaw: 2.93
+      yaw: -0.22
     sigma_hit: 0.2
     tf_broadcast: true
     transform_tolerance: 1.0
