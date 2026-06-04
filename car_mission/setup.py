@@ -30,6 +30,8 @@ setup(
     entry_points={
         'console_scripts': [
             'usb_car_undock = car_mission.usb_car_undock:main',
+            'topview_undock = car_mission.topview_undock:main',
+            'undock_navigator = car_mission.undock_navigator:main',
             'yolo_depth_detector = car_mission.yolo_depth_detector:main',
             'car_tracking = car_mission.car_tracking:main',
             'mission_orchestrator = car_mission.mission_orchestrator:main',
