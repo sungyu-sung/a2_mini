@@ -14,7 +14,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
-        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'models'), glob('models/*.pt')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -29,9 +29,11 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'mission_manager = car_mission.mission_manager:main',
-            'cctv_detector = car_mission.cctv_detector:main',
-            'car_tracker = car_mission.car_tracker:main',
+            'usb_car_undock = car_mission.usb_car_undock:main',
+            'yolo_depth_detector = car_mission.yolo_depth_detector:main',
+            'car_tracking = car_mission.car_tracking:main',
+            'mission_orchestrator = car_mission.mission_orchestrator:main',
+            'dori_search_car = car_mission.dori_search_car:main',
         ],
     },
 )
