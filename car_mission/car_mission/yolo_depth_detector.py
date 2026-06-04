@@ -76,6 +76,9 @@ class YoloDepthDetector(Node):
         self.declare_parameter('approach_kp', 0.5)            # 거리오차(m)→linear P 게인
         self.declare_parameter('max_linear', 0.15)            # m/s 상한
         self.declare_parameter('search_angular', 0.4)         # 탐색 회전 속도 rad/s
+        # True면 DONE(정렬+목표거리 도달)이 done_hold 프레임 연속 유지될 때 노드 자동 종료. 단독 테스트는 False.
+        self.declare_parameter('exit_on_done', True)
+        self.declare_parameter('done_hold', 5)                 # DONE 연속 유지 프레임 수(채터링 방지)
 
         model_path = self.get_parameter('model_path').value
         rgb_topic = self.get_parameter('rgb_topic').value
@@ -95,6 +98,10 @@ class YoloDepthDetector(Node):
         self.approach_kp = float(self.get_parameter('approach_kp').value)
         self.max_linear = float(self.get_parameter('max_linear').value)
         self.search_angular = float(self.get_parameter('search_angular').value)
+        self.exit_on_done = bool(self.get_parameter('exit_on_done').value)
+        self.done_hold = int(self.get_parameter('done_hold').value)
+        self.done_count = 0        # DONE 연속 유지 프레임 카운트
+        self.finished = False      # True가 되면 main 루프가 종료(프로세스 exit)
         self.state = 'SEARCHING'   # SEARCHING / APPROACHING / DONE
 
         if not model_path:
@@ -252,6 +259,15 @@ class YoloDepthDetector(Node):
         cv2.putText(annotated, hud, (10, 28),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
+        # DONE 이 done_hold 프레임 연속 유지되면 종료(채터링 방지). exit_on_done=False면 계속 동작.
+        if self.state == 'DONE':
+            self.done_count += 1
+            if self.exit_on_done and self.done_count >= self.done_hold:
+                self.get_logger().info('목표거리 도달·정렬 완료 → yolo_depth_detector 종료(미션 완료)')
+                self.finished = True
+        else:
+            self.done_count = 0
+
     def _stop(self):
         if self.enable_control:
             self.cmd_pub.publish(Twist())
@@ -262,7 +278,7 @@ def main(args=None):
     node = YoloDepthDetector()
     # imshow/waitKey 는 메인 루프에서 (rclpy.spin() + 콜백 내 imshow 는 창이 안 갱신되는 문제 → spin_once 루프 사용)
     try:
-        while rclpy.ok():
+        while rclpy.ok() and not node.finished:
             rclpy.spin_once(node, timeout_sec=0.05)
             if node.show and node.display_frame is not None:
                 cv2.imshow('YOLO + Depth', node.display_frame)

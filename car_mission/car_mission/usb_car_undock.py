@@ -20,7 +20,11 @@ class UsbCarUndock(Node):
         super().__init__('usb_car_undock')
 
         # ---- parameters (PC/미션마다 바뀌는 값들) ----
-        self.declare_parameter('camera_device', '/dev/video2')  # 노트북마다 다름 (v4l 인덱스)
+        # 외장 USB캠(Jieli USB Composite Device). by-id 경로라 재연결/리부팅해도 인덱스 안 바뀜.
+        # 내장 HP 캠(/dev/video4 계열)과 헷갈리지 않게 고정.
+        self.declare_parameter(
+            'camera_device',
+            '/dev/v4l/by-id/usb-Jieli_Technology_USB_Composite_Device-video-index0')
         self.declare_parameter('model_path', '')                # 비우면 share/models/topview_best.pt
         self.declare_parameter('target_class', 'car')
         self.declare_parameter('confidence', 0.7)
@@ -31,6 +35,12 @@ class UsbCarUndock(Node):
         self.declare_parameter('goal_y', 1.3341)
         self.declare_parameter('goal_yaw', -1.37)
         self.declare_parameter('show', True)                    # cv2 창 표시
+        # 이 USB캠은 YUYV 풀해상도면 USB 대역폭 부족으로 select() timeout 발생 → MJPG로 강제
+        self.declare_parameter('fourcc', 'MJPG')
+        self.declare_parameter('frame_width', 640)
+        self.declare_parameter('frame_height', 480)
+        # True면 Nav2 목표 도착 후 노드 자동 종료(다음 단계로 넘어가기 위함). 단독 테스트는 False.
+        self.declare_parameter('exit_on_done', True)
 
         camera_device = self.get_parameter('camera_device').value
         model_path = self.get_parameter('model_path').value
@@ -53,7 +63,11 @@ class UsbCarUndock(Node):
             model_path = os.path.join(
                 get_package_share_directory('car_mission'), 'models', 'topview_best.pt')
 
-        self.cap = cv2.VideoCapture(camera_device)
+        self.cap = cv2.VideoCapture(camera_device, cv2.CAP_V4L2)
+        fourcc = self.get_parameter('fourcc').value
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(self.get_parameter('frame_width').value))
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(self.get_parameter('frame_height').value))
         if not self.cap.isOpened():
             raise RuntimeError(f'Could not open camera: {camera_device}')
 
@@ -63,6 +77,9 @@ class UsbCarUndock(Node):
         self.undock_sent = False
         self.nav_sent = False
         self.want_nav = False   # undock 완료 후 nav 보내야 함 (서버 준비되면 timer에서 전송)
+        self.exit_on_done = bool(self.get_parameter('exit_on_done').value)
+        self.finished = False   # True가 되면 main 루프가 spin 종료(프로세스 exit)
+        self.nav_retry_at = 0.0  # goal 거부 시 이 시각 이후에만 재시도(0.1s 폭주 방지)
 
         self.create_subscription(
             DockStatus,
@@ -97,7 +114,9 @@ class UsbCarUndock(Node):
             self.send_undock()
 
         # undock 완료 후, navigate_to_pose 서버가 준비되면 nav goal 전송 (서버 발견까지 재시도)
-        if self.want_nav and not self.nav_sent:
+        # 거부(reject)되면 nav_retry_at 이후에만 재시도 → 0.1s 로그 폭주 방지
+        now = self.get_clock().now().nanoseconds * 1e-9
+        if self.want_nav and not self.nav_sent and now >= self.nav_retry_at:
             if self.nav_client.server_is_ready():
                 self.send_nav_goal()
             else:
@@ -159,8 +178,13 @@ class UsbCarUndock(Node):
     def nav_response_callback(self, future):
         goal_handle = future.result()
         if not goal_handle.accepted:
-            self.get_logger().warn('Navigate goal rejected')
             self.nav_sent = False
+            self.nav_retry_at = self.get_clock().now().nanoseconds * 1e-9 + 2.0
+            self.get_logger().warn(
+                'Navigate goal 거부됨 → 2초 후 재시도. Nav2 active 여부 확인: '
+                'ros2 lifecycle get /robot2/bt_navigator (active 여야 함), '
+                'ros2 action list | grep navigate_to_pose',
+                throttle_duration_sec=2.0)
             return
 
         self.get_logger().info('Navigate goal accepted')
@@ -169,6 +193,9 @@ class UsbCarUndock(Node):
 
     def nav_result_callback(self, future):
         self.get_logger().info(f'Navigate finished: status={future.result().status}')
+        if self.exit_on_done:
+            self.get_logger().info('감시포인트 도착 → usb_car_undock 종료(다음 단계로)')
+            self.finished = True
 
     def make_goal_pose(self):
         pose = PoseStamped()
@@ -190,7 +217,8 @@ def main(args=None):
     rclpy.init(args=args)
     node = UsbCarUndock()
     try:
-        rclpy.spin(node)
+        while rclpy.ok() and not node.finished:
+            rclpy.spin_once(node, timeout_sec=0.1)
     except KeyboardInterrupt:
         pass
     finally:

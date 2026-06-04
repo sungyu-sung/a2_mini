@@ -78,6 +78,11 @@ class DoriSearchCar(Node):
     def __init__(self):
         super().__init__('dori_search_car')
 
+        # True면 탐색 완료(CENTER 성공) 또는 한바퀴 탐색 실패(beep) 후 노드 자동 종료. 단독 테스트는 False.
+        self.declare_parameter('exit_on_done', True)
+        self.exit_on_done = bool(self.get_parameter('exit_on_done').value)
+        self.finished = False   # True가 되면 main 루프가 spin 종료(프로세스 exit)
+
         self.model = YOLO(MODEL_PATH)
         self.bridge = CvBridge()
 
@@ -166,12 +171,18 @@ class DoriSearchCar(Node):
         self.state = 'DONE'
         self.publish_stop()
         self.get_logger().info('car 중앙 정렬 완료 → 정지(DONE)')
+        if self.exit_on_done:
+            self.get_logger().info('dori_search_car 종료(다음 단계로)')
+            self.finished = True
 
     def enter_beep(self):
         self.state = 'IDLE'
         self.publish_stop()
         self.send_beep()
         self.get_logger().info(f'한 바퀴({math.degrees(self.total_turned):.0f}°) 탐색 완료 — car 없음 → 삐뽀삐뽀')
+        if self.exit_on_done:
+            self.get_logger().info('dori_search_car 종료(car 미발견이지만 다음 단계로)')
+            self.finished = True
 
     def send_beep(self):
         msg = AudioNoteVector()
@@ -324,7 +335,8 @@ def main(args=None):
     rclpy.init(args=args)
     node = DoriSearchCar()
     try:
-        rclpy.spin(node)
+        while rclpy.ok() and not node.finished:
+            rclpy.spin_once(node, timeout_sec=0.1)
     except KeyboardInterrupt:
         pass
     finally:
